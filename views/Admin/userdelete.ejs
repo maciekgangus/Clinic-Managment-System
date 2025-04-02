@@ -1,0 +1,44 @@
+    <div class="container mt-4">
+        <h2>Panel Administratora</h2>
+
+        <!-- Lista użytkowników -->
+        <form method="POST" action="/admin/userdelete">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll"> Wybierz wszystkie</th>
+                        <th>Imię</th>
+                        <th>Nazwisko</th>
+                        <th>Email</th>
+                        <th>Nazwa użytkownika</th>
+                        <th>Typ użytkownika</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.forEach(user => { %>
+                        <tr>
+                            <td><input type="checkbox" name="userIds" value="<%= user.uzytkownik_id %>"<% if (user.uzytkownik_id === currentUserId) { %> disabled <% } %> ></td>
+                            <td><%= user.imie %></td>
+                            <td><%= user.nazwisko %></td>
+                            <td><%= user.email %></td>
+                            <td><%= user.nazwa_uzytkownika %></td>
+                            <td><%= user.typ_uzytkownika %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+
+            <!-- Przycisk do usunięcia zaznaczonych użytkowników -->
+            <button type="submit" class="btn btn-danger">Usuń zaznaczone</button>
+        </form>
+    </div>
+
+    <script>
+        // Funkcja do zaznaczania wszystkich checkboxów
+        document.getElementById('selectAll').addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('input[name="userIds"]:not([disabled])'); // Pomija checkboxy z atrybutem disabled
+            checkboxes.forEach(checkbox => checkbox.checked = this.checked);
+        });
+    </script>
+    
+

@@ -1,0 +1,100 @@
+<form class="p-4 col-6 flex-column m-auto">
+    <h2 class="mb-4">Rejestracja Pacjenta</h2>
+
+    <!-- Imię -->
+    <div class="mb-3">
+        <label for="imie" class="form-label">Imię</label>
+        <input type="text" class="form-control" id="imie" name="imie" placeholder="Wpisz imię" required>
+    </div>
+
+    <!-- Nazwisko -->
+    <div class="mb-3">
+        <label for="nazwisko" class="form-label">Nazwisko</label>
+        <input type="text" class="form-control" id="nazwisko" name="nazwisko" placeholder="Wpisz nazwisko" required>
+    </div>
+
+    <!-- PESEL -->
+    <div class="mb-3">
+        <label for="pesel" class="form-label">PESEL</label>
+        <input type="text" class="form-control" id="pesel" name="pesel" placeholder="Wpisz numer PESEL" pattern="^\d{11}$" minlength="11" maxlength="11" required>
+        <small id="peselError" class="text-danger" style="display: none;"></small>
+    </div>
+
+
+    <!-- Data urodzenia -->
+    <div class="mb-3">
+        <label for="data_urodzenia" class="form-label">Data urodzenia</label>
+        <input type="date" class="form-control" id="data_urodzenia" name="data_urodzenia" required>
+    </div>
+
+    <!-- Płeć -->
+    <div class="mb-3">
+        <label class="form-label">Płeć</label><br>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="plec" id="plecM" value="M" required>
+            <label class="form-check-label" for="plecM">Mężczyzna</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="plec" id="plecK" value="K" required>
+            <label class="form-check-label" for="plecK">Kobieta</label>
+        </div>
+    </div>
+
+
+
+    <!-- Numer telefonu -->
+    <div class="mb-3">
+        <label for="telefon" class="form-label">Numer telefonu</label>
+        <input type="text" class="form-control" id="telefon" name="telefon" placeholder="Wpisz numer telefonu" required>
+    </div>
+
+    <!-- Adres e-mail -->
+    <div class="mb-3">
+        <label for="email" class="form-label">Adres e-mail</label>
+        <input type="email" class="form-control" id="email" name="email" placeholder="Wpisz adres e-mail" required>
+    </div>
+
+    <!-- Przycisk rejestracji -->
+    <button type="submit" class="btn btn-primary">Zarejestruj pacjenta</button>
+    <small id="submitSucces" class="text-success" style="display: none;"></small>
+
+</form>
+
+<script>
+    $(document).ready(function () {
+        $('form').on('submit', handleFormSubmit);
+    });
+
+    function handleFormSubmit(e) {
+        e.preventDefault(); // Zapobiegaj przeładowaniu strony
+
+        const formData = $(this).serialize(); // Pobranie danych formularza
+
+        $.ajax({
+            url: '/register/registerpatient',
+            method: 'POST',
+            data: formData,
+            success: function (response) {
+                $('form')[0].reset();
+
+                // Ukrywanie ewentualnych błędów
+                $('#peselError').text('').hide();
+
+                // Wyświetlenie komunikatu o sukcesie
+                $('#submitSucces')
+                    .text('Pacjent został pomyślnie zarejestrowany.')
+                    .show()
+                    .fadeOut(3000); // Automatyczne ukrycie po 3 sekundach // Usuwanie ewentualnego błędu
+            },
+            error: function (xhr) {
+                if (xhr.status === 400) {
+                    const errorMessage = xhr.responseJSON.message;
+                    $('#peselError').text(errorMessage).show();
+                } else {
+                    alert('Wystąpił błąd podczas zapisu wizyty.');
+                }
+
+            }
+        });
+    }
+</script>

@@ -1,0 +1,114 @@
+<div class="container mt-4">
+    <h2>Twoje dane</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Dane użytkownika</h5>
+            <form id="userForm" method="POST" action="/profile" novalidate>
+                <table class="table">
+                    <tbody>
+                    <tr>
+                        <th scope="row" class="py-3" >Imię</th>
+                        <td id="imieCell" class="py-3">
+                            <span class="editable-text"><%= userSpecified.imie %></span>
+                            <input type="text" class="form-control" name="firstName" value="<%= userSpecified.imie %>" style="display:none;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="py-3">Nazwisko</th>
+                        <td id="nazwiskoCell" class="py-3">
+                            <span class="editable-text"><%= userSpecified.nazwisko %></span>
+                            <input type="text" class="form-control" name="lastName" value="<%= userSpecified.nazwisko %>" style="display:none;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="py-3">Nazwa użytkownika</th>
+                        <td id="usernameCell" class="py-3">
+                            <span class="editable-text"><%= user.nazwa_uzytkownika %></span>
+                            <input type="text" class="form-control" name="username" value="<%= user.nazwa_uzytkownika %>" style="display:none;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="py-3">Email</th>
+                        <td id="emailCell" class="py-3">
+                            <span class="editable-text"><%= userSpecified.email %></span>
+                            <input type="email" class="form-control" name="email" value="<%= userSpecified.email %>" style="display:none;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Typ użytkownika</th>
+                        <td id="userTypeCell">
+                            <span class="editable-text"><%= user.typ_uzytkownika %></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="py-3">Data urodzenia</th>
+                        <td id="birthdateCell" class="py-3">
+                            <span class="editable-text"><%= new Date(userSpecified.data_urodzenia).toLocaleDateString() %></span>
+                            <input type="date" class="form-control" name="dob" value="<%= new Date(userSpecified.data_urodzenia).toISOString().split('T')[0] %>" style="display:none;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="py-3">Numer telefonu</th>
+                        <td id="phoneCell" class="py-3">
+                            <span class="editable-text"><%= userSpecified.numer_telefonu %></span>
+                            <input type="text" class="form-control" name="phoneNumber" value="<%= userSpecified.numer_telefonu %>" style="display:none;">
+                        </td>
+                    </tr>
+
+                    <% if (role === 'lekarz') { %>
+                        <tr>
+                            <th scope="row" class="py-3">Specjalizacja</th>
+                            <td id="specializationCell" class="py-3">
+                                <span class="editable-text"><%= userSpecified.specjalizacja %></span>
+                                <input type="text" class="form-control" name="specialization" value="<%= userSpecified.specjalizacja %>" style="display:none;">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row" class="py-3">Godzina rozpoczęcia pracy</th>
+                            <td id="startCell" class="py-3">
+                                <span class="editable-text"><%= userSpecified.godziny_pracy_od.substring(0, 5) %></span>
+                                <input type="time" class="form-control" name="start" value="<%= userSpecified.godziny_pracy_od %>" style="display:none;">
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row" class="py-3">Godzina zakończenia pracy</th>
+                            <td id="endCell" class="py-3">
+                                <span class="editable-text"><%= userSpecified.godziny_pracy_do.substring(0, 5) %></span>
+                                <input type="time" class="form-control" name="end" value="<%= userSpecified.godziny_pracy_do %>" style="display:none;">
+                            </td>
+                        </tr>
+                    <% } %>
+                    </tbody>
+                </table>
+
+                <!-- Przycisk edytowania danych -->
+                <button type="button" class="btn btn-primary" id="editBtn">Edytuj dane</button>
+                <button type="submit" class="btn btn-success" id="saveBtn" style="display: none;">Zapisz</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JavaScript do zmiany trybu edycji
+    const editBtn = document.getElementById('editBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const cells = document.querySelectorAll('td');
+
+    // Funkcja edytowania pól formularza
+    editBtn.addEventListener('click', function() {
+        // Ukrywanie spanów, pokazywanie inputów
+        cells.forEach(cell => {
+            const span = cell.querySelector('.editable-text');
+            const input = cell.querySelector('input');
+            if (span && input) {
+                span.style.display = 'none';  // Ukrywamy tekst
+                input.style.display = 'block'; // Pokazujemy pole input
+            }
+        });
+
+        // Zmiana przycisku na 'Zapisz'
+        saveBtn.style.display = 'inline-block';
+        editBtn.style.display = 'none';
+    });
+</script>

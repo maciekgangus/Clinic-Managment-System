@@ -1,0 +1,197 @@
+<div class="container mt-4 col-6">
+    <h2 class="text-center">Umów Wizytę</h2>
+    <form method="POST" action="/Register/appointment">
+        <!-- Pole wyboru lekarza -->
+        <div class="mb-3">
+            <label for="doctorSelect" class="form-label">Wybierz Lekarza</label>
+            <select class="form-select" id="doctorSelect" name="doctorId" style="width: 100%" required>
+                <option value="" disabled selected>Wybierz lekarza...</option>
+                <% doctors.forEach(doctor => { %>
+                    <option value="<%= doctor.id %>">
+                        <%= doctor.imie %> <%= doctor.nazwisko %> (<%= doctor.specjalizacja %>)
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <!-- Pole wyboru pacjenta -->
+        <div class="mb-3">
+            <label for="patientSelect" class="form-label">Wybierz Pacjenta</label>
+            <select class="form-select" id="patientSelect" name="patientId" style="width: 100%" required>
+                <option value="" disabled selected>Wybierz pacjenta...</option>
+                <% patients.forEach(patient => { %>
+                    <option value="<%= patient.id %>">
+                        <%= patient.imie %> <%= patient.nazwisko %> (PESEL: <%= patient.pesel %>)
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+
+        <!-- Opis wizyty -->
+        <div class="mb-3">
+            <label for="visitDescription" class="form-label">Opis wizyty</label>
+            <textarea class="form-control" id="visitDescription" name="description" rows="3" required></textarea>
+        </div>
+
+        <!-- Wybór daty wizyty -->
+        <div class="mb-3">
+            <label for="visitDate" class="form-label">Wybierz termin wizyty</label>
+            <input type="date" class="form-control" id="visitDate" name="visitDate" required>
+            <small id="visitDateError" class="text-danger" style="display: none;"></small> <!-- Miejsce na błąd -->
+        </div>
+
+        <!-- Wybór dostępnych godzin -->
+        <div class="mb-3">
+            <label for="visitTime" class="form-label">Wybierz godzinę wizyty</label>
+            <select class="form-select" id="visitTime" name="visitTime" style="width: 100%" required>
+                <option value="" disabled selected>Wybierz godzinę...</option>
+                <!-- Dostępne godziny będą ładowane dynamicznie -->
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Umów Wizytę</button>
+    </form>
+</div>
+
+<!-- Import jQuery i Select2 -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script>
+    // Inicjalizacja Select2 po załadowaniu strony
+    $(document).ready(function () {
+        // Inicjalizacja Select2 dla list
+        initializeSelect2();
+
+        // Obsługa zmiany lekarza lub daty
+        $('#doctorSelect, #visitDate').on('change', handleDoctorOrDateChange);
+
+        // Obsługa wysyłania formularza
+        $('form').on('submit', handleFormSubmit);
+    });
+
+    /**
+     * Inicjalizacja Select2 dla pól formularza
+     */
+    function initializeSelect2() {
+        $('#doctorSelect, #patientSelect').select2({
+            placeholder: 'Wybierz...',
+            allowClear: true,
+            width: '100%',
+        });
+
+        $('#visitTime').select2({
+            placeholder: 'Wybierz godzinę...',
+            allowClear: true,
+            width: '100%',
+            minimumResultsForSearch: Infinity // Wyłącza pasek wyszukiwania
+        });
+    }
+
+    /**
+     * Obsługa zmiany lekarza lub daty wizyty
+     */
+    function handleDoctorOrDateChange() {
+        const doctorId = $('#doctorSelect').val();
+        const visitDate = $('#visitDate').val();
+
+        if (doctorId && visitDate) {
+            fetchAvailableHours(doctorId, visitDate);
+        }
+    }
+
+    /**
+     * Pobiera dostępne godziny wizyty od backendu
+     * @param {string} doctorId - ID wybranego lekarza
+     * @param {string} visitDate - Wybrana data wizyty
+     */
+    function fetchAvailableHours(doctorId, visitDate) {
+        //serialize
+
+        $.ajax({
+            url: '/register/appointment/available-hours',
+            method: 'GET',
+            data: {
+                doctorId: doctorId,
+                visitDate: visitDate
+            },
+            success: function (data) {
+                populateAvailableHours(data.availableHours);
+                $('#visitDateError').text('').hide(); // Usuwanie ewentualnego błędu
+            },
+            error: function (xhr) {
+                if (xhr.status === 400) {
+                    const errorMessage = xhr.responseJSON.message || 'Wystąpił błąd.';
+                    $('#visitDateError').text(errorMessage).show();
+                } else {
+                    alert('Wystąpił błąd. Spróbuj ponownie później.');
+                }
+            }
+        });
+    }
+
+    /**
+     * Wypełnia listę dostępnych godzin w Select2
+     * @param {Array} availableHours - Lista dostępnych godzin
+     */
+    function populateAvailableHours(availableHours) {
+        $('#visitTime').empty();
+        $('#visitTime').append('<option value="" disabled selected>Wybierz godzinę...</option>');
+
+        if (availableHours.length > 0) {
+            availableHours.forEach(function (hour) {
+                const formattedHour = hour.slice(0, 5); // Usuń sekundy
+                $('#visitTime').append(`<option value="${formattedHour}">${formattedHour}</option>`);
+            });
+        } else {
+            $('#visitTime').append('<option value="" disabled>Brak dostępnych godzin</option>');
+        }
+
+        // Ponowna inicjalizacja Select2 dla listy godzin
+        $('#visitTime').select2({
+            placeholder: 'Wybierz godzinę...',
+            allowClear: true,
+            width: '100%',
+            minimumResultsForSearch: Infinity
+        });
+    }
+
+    /**
+     * Obsługa wysyłania formularza
+     * @param {Event} e - Zdarzenie wysłania formularza
+     */
+    function handleFormSubmit(e) {
+        e.preventDefault(); // Zapobiegaj przeładowaniu strony
+
+        const formData = $(this).serialize(); // Pobranie danych formularza
+
+        $.ajax({
+            url: '/register/appointment',
+            method: 'POST',
+            data: formData,
+            success: function (response) {
+                $('#visitDateError').text('').hide(); // Usuwanie ewentualnego błędu
+                resetForm(); // Resetowanie formularza
+            },
+            error: function (xhr) {
+                if (xhr.status === 400) {
+                    const errorMessage = xhr.responseJSON.message || 'Wystąpił błąd.';
+                    $('#visitDateError').text(errorMessage).show();
+                } else {
+                    alert('Wystąpił błąd podczas zapisu wizyty.');
+                }
+            }
+        });
+    }
+
+    /**
+     * Resetuje formularz
+     */
+    function resetForm() {
+        $('form')[0].reset(); // Reset pól formularza
+        $('#doctorSelect, #patientSelect, #visitTime').val(null).trigger('change'); // Reset Select2
+    }
+
+</script>
+

@@ -1,0 +1,95 @@
+<div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark">
+    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+      <span class="fs-4">Menu</span>
+    </a>
+    <hr>
+    <ul class="nav nav-pills col-9 flex-column mb-auto mx-auto">
+      <li class="nav-item">
+        <a href="/" class="nav-link btn btn-outline-primary text-white mb-1">
+          Strona Główna
+        </a>
+      </li>
+      <% if (role === 'lekarz') { %>
+        <li>
+          <a href="/Doctor/prescription" class="nav-link btn btn-outline-primary text-white mb-1">
+            Raporty o pacjentach
+          </a>
+        </li>
+            <li>
+                <a href="/Doctor/raport" class="nav-link btn btn-outline-primary text-white mb-1">
+                    Raport pracy
+                </a>
+            </li>
+        <li>
+          <a href="/Doctor/appointment" class="nav-link btn btn-outline-primary text-white mb-1">
+            Rozpocznij wizytę
+          </a>
+        </li>
+        <% } %>
+      <% if (role === 'recepcjonistka') { %>
+      <li>
+        <a href="/Register/registerpatient" class="nav-link btn btn-outline-primary text-white mb-1">
+          Rejestruj Pacjenta
+        </a>
+      </li>
+      <li>
+        <a href="/Register/patients" class="nav-link btn btn-outline-primary text-white mb-1">
+            Pacjenci
+        </a>
+      </li>
+      <li>
+        <a href="/Register/appointment" class="nav-link btn btn-outline-primary text-white mb-1">
+          Umów wizytę
+        </a>
+      </li>
+      <% } %>
+      <% if (role === 'administrator') { %>
+      <li>
+        <a href="/Admin/userdelete" class="nav-link btn btn-outline-primary text-white mb-1">
+          Panel Administratora
+        </a>
+      </li>
+      <li>
+          <a href="/Admin/adduser" class="nav-link btn btn-outline-primary text-white mb-1">
+            Dodaj Użytkownika
+          </a>
+      </li>
+        <% } %>
+    </ul>
+    <hr>
+    <div class="dropdown mb-1">
+      <% if (isLoggedIn) { %>
+          <!-- Gdy użytkownik jest zalogowany -->
+          <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+              <strong><%= username %></strong>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser">
+              <li><a class="dropdown-item" href="/profile">Profil</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/logout">Wyloguj się</a></li>
+          </ul>
+      <% } else { %>
+          <!-- Gdy użytkownik NIE jest zalogowany -->
+          <a href="/login" class="btn btn-outline-light col-6 container-fluid d-flex justify-content-center">Zaloguj się</a>
+      <% } %>
+  </div>
+  
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+      // Pobierz wszystkie linki w menu
+      const navLinks = document.querySelectorAll('.nav-link');
+      
+      // Pobierz bieżący URL
+      const currentPath = window.location.pathname;
+
+      // Iteruj po linkach i dodaj klasę 'active' do pasującego linku
+      navLinks.forEach(link => {
+          // Jeśli href linku pasuje do aktualnej ścieżki URL
+          if (link.getAttribute('href') === currentPath) {
+              link.classList.add('active');
+          }
+      });
+  });
+</script>

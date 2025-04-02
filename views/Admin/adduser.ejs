@@ -1,0 +1,107 @@
+<form action="/admin/adduser" method="POST" class="p-4 col-6 flex-column m-auto">
+    
+    <div class="mb-3">
+        <label class="form-label">Wybierz typ użytkownika:</label><br>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="userType" id="adminOption" value="administrator" required>
+            <label class="form-check-label" for="adminOption">Administrator</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="userType" id="doctorOption" value="lekarz" required>
+            <label class="form-check-label" for="doctorOption">Lekarz</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="userType" id="receptionistOption" value="recepcjonistka" required>
+            <label class="form-check-label" for="receptionistOption">Recepcjonistka</label>
+        </div>
+    </div>
+
+    <!-- Email -->
+    <div class="mb-3">
+        <label for="email" class="form-label">Adres email</label>
+        <input type="email" class="form-control" id="email" name="email" required>
+    </div>
+
+    <!-- Nazwa użytkownika -->
+    <div class="mb-3">
+        <label for="username" class="form-label">Nazwa użytkownika</label>
+        <input type="text" class="form-control" id="username" name="username" required>
+    </div>
+
+    <!-- Hasło -->
+    <div class="mb-3">
+        <label for="password" class="form-label">Hasło</label>
+        <input type="password" class="form-control" id="password" name="password" required>
+    </div>
+
+    <!-- Data urodzenia -->
+    <div class="mb-3">
+        <label for="dob" class="form-label">Data urodzenia</label>
+        <input type="date" class="form-control" id="dob" name="dob" required>
+    </div>
+
+    <!-- Imię -->
+    <div class="mb-3">
+        <label for="firstName" class="form-label">Imię</label>
+        <input type="text" class="form-control" id="firstName" name="firstName" required>
+    </div>
+
+    <!-- Nazwisko -->
+    <div class="mb-3">
+        <label for="lastName" class="form-label">Nazwisko</label>
+        <input type="text" class="form-control" id="lastName" name="lastName" required>
+    </div>
+
+    <!-- Nr telefonu -->
+    <div class="mb-3">
+        <label for="lastName" class="form-label">Numer telefonu</label>
+        <input type="text" class="form-control" id="phoneNumber" name="phoneNumber" required>
+    </div>
+
+    <!-- Specjalizacja dla lekarza -->
+    <div class="mb-3" id="specializationDiv" style="display: none;">
+        <label for="specialization" class="form-label">Specjalizacja (tylko dla lekarza)</label>
+        <input type="text" class="form-control" id="specialization" name="specialization">
+    </div>
+
+    <div class="mb-3" id="startDiv" style="display: none;">
+        <label for="start" class="form-label">Godzina rozpoczęcia pracy</label>
+        <input type="time" class="form-control" id="start" name="start" required>
+    </div>
+
+    <div class="mb-3" id="endDiv" style="display: none;">
+        <label for="end" class="form-label">Godzina zakończenia pracy</label>
+        <input type="time" class="form-control" id="end" name="end" required>
+    </div>
+
+    <!-- Przycisk do wysyłania formularza -->
+    <button type="submit" class="btn btn-primary">Stwórz użytkownika</button>
+
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const doctorOption = document.getElementById('doctorOption');
+        const receptionistOption = document.getElementById('receptionistOption');
+        const adminOption = document.getElementById('adminOption');
+        const specializationDiv = document.getElementById('specializationDiv');
+
+        // Funkcja do pokazywania lub ukrywania pola specjalizacji
+        const toggleSpecializationField = () => {
+            if (doctorOption.checked) {
+                specializationDiv.style.display = 'block';
+                startDiv.style.display = 'block';
+                endDiv.style.display = 'block';
+            } else {
+                specializationDiv.style.display = 'none';
+                startDiv.style.display = 'none';
+                endDiv.style.display = 'none';
+            }
+        };
+
+        // Dodanie listenerów do przycisków radio
+        doctorOption.addEventListener('change', toggleSpecializationField);
+        receptionistOption.addEventListener('change', toggleSpecializationField);
+        adminOption.addEventListener('change', toggleSpecializationField);
+    });
+</script>

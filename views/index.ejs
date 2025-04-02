@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <title><%= title %></title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
+
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Header -->
+    <header class="bg-dark text-white py-3">
+        <div class="container">
+            <h1 class="h3 mb-0">Przychodnia Lekarska</h1>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="container-fluid flex-grow-1 d-flex p-0">
+        <!-- Pasek boczny -->
+        <div class="d-flex flex-column col-2 bg-dark text-white">
+            <%- include('partials/sidebar') %>
+        </div>
+
+        <!-- Główna sekcja -->
+        <div class="col-10 mt-5 overflow-auto" style="height: calc(100vh - 200px);">
+            <%- include(content) %> <!-- To miejsce na dynamiczną treść -->
+        </div>
+
+    </div>
+
+    <!-- Stopka -->
+    <footer class="footer bg-dark py-3 mt-auto">
+        <div class="container text-center">
+            <span class="text-white">Przychodnia Lekarska &copy; 2024</span>
+        </div>
+    </footer>
+
+    <script src="/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<div class="container mt-4 col-6 mx-auto">
+    <h2>Raport Pracy Lekarza</h2>
+
+    <div class="row">
+        <div class="mt-4">
+            <label for="yearSelect">Wybierz Rok:</label>
+            <select id="yearSelect" class="form-control"></select>
+        </div>
+    </div>
+
+    <div id="yearStats" class="mt-4 d-none">
+        <h4>Statystyki Roczne</h4>
+        <p>Całkowita liczba wizyt: <span id="yearTotalVisits"></span></p>
+        <p>Średnia liczba wizyt na miesiąc: <span id="yearAvgVisits"></span></p>
+        <p>Ilość przepisanych leków: <span id="yearTotalMeds"></span></p>
+        <p>Łączny koszt leków: <span id="yearTotalCost"></span></p>
+    </div>
+
+    <div id="monthStats" class="mt-4 d-none">
+        <h4>Statystyki Miesięczne</h4>
+        <label for="monthSelect">Wybierz Miesiąc:</label>
+        <select id="monthSelect" class="form-control"></select>
+        <br>
+        <p>Całkowita liczba wizyt w miesiącu: <span id="monthTotalVisits"></span></p>
+        <p>Ilość przepisanych leków: <span id="monthTotalMeds"></span></p>
+        <p>Łączny koszt leków w miesiącu: <span id="monthTotalCost"></span></p>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        // Pobierz dostępne lata
+        $.getJSON(`/doctor/raport/years`, function (data) {
+            const yearSelect = $('#yearSelect');
+            yearSelect.empty();
+            yearSelect.append('<option value="">Wybierz rok</option>');
+            data.years.forEach(year => {
+                yearSelect.append(`<option value="${year}">${year}</option>`);
+            });
+        });
+
+        // Pobranie statystyk rocznych
+        $('#yearSelect').on('change', function () {
+            const selectedYear = $(this).val();
+            if (!selectedYear) {
+                $('#yearStats').addClass('d-none');
+                $('#monthStats').addClass('d-none');
+                return;
+            }
+
+            $.getJSON(`/doctor/raport/yearStats`, { year: selectedYear }, function (data) {
+                $('#yearStats').removeClass('d-none');
+                $('#monthStats').removeClass('d-none');
+                $('#yearTotalVisits').text(data.totalVisits || 0);
+                $('#yearAvgVisits').text(data.avgVisitsPerMonth || 0);
+                $('#yearTotalMeds').text(data.totalMeds || 0);
+                $('#yearTotalCost').text(`${data.totalCost || 0} PLN`);
+            });
+
+            $.getJSON(`/doctor/raport/months`, { year: selectedYear }, function (data) {
+                console.log("Dane miesięcy:", data); // Loguj dane miesięcy
+                const monthSelect = $('#monthSelect');
+                monthSelect.empty();
+                monthSelect.append('<option value="0">Wybierz miesiąc</option>');
+
+                if (data.months && data.months.length > 0) {
+                    data.months.forEach(month => {
+                        const monthName = new Date(0, month - 1).toLocaleString('pl-PL', { month: 'long' });
+                        monthSelect.append(`<option value="${month}">${monthName}</option>`);
+                    });
+                } else {
+                    monthSelect.append('<option value="" disabled>Brak dostępnych miesięcy</option>');
+                }
+                monthSelect.val('0').change();
+
+            });
+        });
+
+        // Pobranie statystyk miesięcznych
+        $('#monthSelect').on('change', function () {
+            const selectedMonth = $(this).val();
+            const selectedYear = $('#yearSelect').val();
+            if (!selectedMonth || !selectedYear) return;
+
+            $.getJSON(`/doctor/raport/monthStats`, { year: selectedYear, month: selectedMonth }, function (data) {
+                $('#monthStats').removeClass('d-none');
+                $('#monthTotalVisits').text(data.totalVisits || 0);
+                $('#monthTotalMeds').text(data.totalMeds || 0);
+                $('#monthTotalCost').text(`${data.totalCost || 0} PLN`);
+            });
+        });
+    });
+
+
+
+</script>

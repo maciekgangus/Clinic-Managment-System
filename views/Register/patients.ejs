@@ -1,0 +1,180 @@
+<div class="container mt-4 col-9">
+    <h2>Lista Pacjentów</h2>
+
+    <!-- Wyszukiwarka -->
+    <form id="searchForm" class="mb-3">
+        <div class="row">
+            <div class="col-md-6">
+                <input type="text" id="searchInput" class="form-control" placeholder="Wyszukaj...">
+            </div>
+        </div>
+    </form>
+
+    <!-- Filtry i sortowanie -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label>Płeć:</label>
+            <div>
+                <input type="radio" name="genderFilter" value="" id="genderAll" checked>
+                <label for="genderAll">Wszystkie</label>
+                <input type="radio" name="genderFilter" value="M" id="genderMale">
+                <label for="genderMale">Mężczyźni</label>
+                <input type="radio" name="genderFilter" value="K" id="genderFemale">
+                <label for="genderFemale">Kobiety</label>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <label>Sortowanie:</label>
+            <div class="input-group">
+                <select id="sortBy" class="form-select">
+                    <option value="">Brak sortowania</option>
+                    <option value="imie">Imię</option>
+                    <option value="nazwisko">Nazwisko</option>
+                    <option value="data_urodzenia">Data Urodzenia</option>
+                </select>
+                <button class="btn btn-outline-primary" id="toggleSortOrder" data-order="asc" disabled>
+                    <span id="sortArrow">↑</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela wyników -->
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Imię</th>
+            <th>Nazwisko</th>
+            <th>Numer telefonu</th>
+            <th>Email</th>
+            <th>Data urodzenia</th>
+            <th>Pesel</th>
+            <th>Płeć</th>
+        </tr>
+        </thead>
+        <tbody id="patientTable"></tbody>
+    </table>
+
+    <!-- Paginacja -->
+    <nav aria-label="Paginacja">
+        <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
+</div>
+
+<script>
+    $(document).ready(function () {
+        let currentSortOrder = 'asc';
+
+        const updateTable = (patients) => {
+            const $tableBody = $('#patientTable');
+            $tableBody.empty();
+
+            if (patients.length > 0) {
+                patients.forEach(patient => {
+                    $tableBody.append(`
+                    <tr>
+                        <td>${patient.imie}</td>
+                        <td>${patient.nazwisko}</td>
+                        <td>${patient.numer_telefonu}</td>
+                        <td>${patient.email}</td>
+                        <td>${new Date(patient.data_urodzenia).toLocaleDateString('pl-PL')}</td>
+                        <td>${patient.pesel}</td>
+                        <td>${patient.plec}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm delete-patient" data-id="${patient.pacjent_id}">Usuń</button>
+                        </td>
+                    </tr>
+                `);
+                });
+            } else {
+                $tableBody.html('<tr><td colspan="7" class="text-center">Brak wyników</td></tr>');
+            }
+        };
+
+        const updatePagination = (totalPages, currentPage) => {
+            const $pagination = $('#pagination');
+            $pagination.empty();
+
+            for (let i = 1; i <= totalPages; i++) {
+                const isActive = i === Number(currentPage);
+                const $pageItem = $('<li></li>').addClass(`page-item ${isActive ? 'active' : ''}`);
+                const $pageLink = $('<a></a>')
+                    .addClass('page-link')
+                    .attr('href', '#')
+                    .text(i)
+                    .on('click', function (e) {
+                        e.preventDefault();
+                        loadPatients(i);
+                    });
+
+                $pageItem.append($pageLink);
+                $pagination.append($pageItem);
+            }
+        };
+
+        const loadPatients = (page = 1) => {
+            const search = $('#searchInput').val();
+            const gender = $('input[name="genderFilter"]:checked').val();
+            const sortBy = $('#sortBy').val();
+            const order = currentSortOrder;
+
+            $.ajax({
+                url: '/Register/patients/getPatients',
+                method: 'GET',
+                data: { search, sortBy, order, page, gender },
+                success: function (data) {
+                    updateTable(data.patients);
+                    updatePagination(data.totalPages, data.currentPage);
+                },
+                error: function () {
+                    alert('Błąd podczas ładowania danych.');
+                    $('#patientTable').html('<tr><td colspan="7" class="text-center text-danger">Nie udało się załadować danych.</td></tr>');
+                }
+            });
+        };
+
+        $('#sortBy').on('change', function () {
+            const sortBy = $(this).val();
+            const $toggleSortOrder = $('#toggleSortOrder');
+            $toggleSortOrder.prop('disabled', !sortBy);
+            loadPatients(1);
+        });
+
+        $('#toggleSortOrder').on('click', function (e) {
+            e.preventDefault();
+            currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            $('#sortArrow').text(currentSortOrder === 'asc' ? '↑' : '↓');
+            loadPatients(1);
+        });
+
+        $('input[name="genderFilter"]').on('change', function () {
+            loadPatients(1);
+        });
+
+        $('#searchInput').on('input', function () {
+            loadPatients(1);
+        });
+
+        $(document).on('click', '.delete-patient', function () {
+            const patientId = $(this).data('id');
+            if (confirm('Czy na pewno chcesz usunąć tego pacjenta?')) {
+                $.ajax({
+                    url: `/Register/patients/delete/${patientId}`,
+                    method: 'DELETE',
+                    success: function () {
+                        alert('Pacjent został usunięty.');
+                        loadPatients(1);
+                    },
+                    error: function () {
+                        alert('Błąd podczas usuwania pacjenta.');
+                    }
+                });
+            }
+        });
+
+
+        loadPatients();
+    });
+
+</script>

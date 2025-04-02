@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalendarz Wizyt</title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script type="module" src="/js/script.js"></script>
+</head>
+<body>
+<div class="container mt-4">
+    <h2>Kalendarz wizyt</h2>
+    <% if (role === 'recepcjonistka') { %>
+        <div class="form-group">
+            <label for="doctorSelect">Wybierz lekarza:</label>
+            <select id="doctorSelect" class="form-control select2" style="width: 100%;">
+                <!-- Opcje -->
+            </select>
+        </div>
+        <br>
+    <% } %>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn btn-outline-secondary" id="prevWeek">&larr; Poprzedni tydzień</button>
+        <h4 id="currentWeek">Tydzień: <span id="weekRange"></span></h4>
+        <button class="btn btn-outline-secondary" id="nextWeek">Następny tydzień &rarr;</button>
+    </div>
+    <table class="table table-bordered text-center">
+        <thead class="thead-dark">
+        <tr>
+            <th>Godzina</th>
+            <th>Poniedziałek<br><small id="mondayDate" class="text-muted"></small></th>
+            <th>Wtorek<br><small id="tuesdayDate" class="text-muted"></small></th>
+            <th>Środa<br><small id="wednesdayDate" class="text-muted"></small></th>
+            <th>Czwartek<br><small id="thursdayDate" class="text-muted"></small></th>
+            <th>Piątek<br><small id="fridayDate" class="text-muted"></small></th>
+        </tr>
+        </thead>
+        <tbody id="calendarBody"></tbody>
+    </table>
+</div>
+
+<!-- Modal szczegółów wizyty -->
+<div class="modal fade" id="visitDetailsModal" tabindex="-1" aria-labelledby="visitDetailsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="visitDetailsLabel">Szczegóły Wizyty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Data Wizyty:</strong> <span id="visitDate"></span></p>
+                <p><strong>Godzina Wizyty:</strong> <span id="visitTime"></span></p>
+                <p><strong>Pacjent:</strong> <span id="patientName"></span></p>
+                <p><strong>PESEL:</strong> <span id="patientPesel"></span></p>
+                <p><strong>Opis:</strong> <span id="visitDescription"></span></p>
+            </div>
+            <div class="modal-footer">
+                <% if (role === 'recepcjonistka') { %>
+                    <button type="button" class="btn btn-danger" id="cancelVisitButton">Odwołaj Wizytę</button>
+                <% } else if (role === 'lekarz') { %>
+                    <button type="button" class="btn btn-primary" id="startVisitButton">Rozpocznij Wizytę</button>
+                <% } %>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+<script type="module">
+    import {formatDateWithoutTimezone} from "/js/script.js";
+
+    $(document).ready(function () {
+        const fetchDoctors = () => {
+            return $.ajax({
+                url: '/Doctor/calendar/getDoctors',
+                method: 'GET',
+                success: function (doctors) {
+                    if (!Array.isArray(doctors)) {
+                        console.error('Oczekiwano tablicy lekarzy, otrzymano:', doctors);
+                        return;
+                    }
+                    const doctorSelect = $('#doctorSelect');
+                    doctorSelect.empty(); // Wyczyszczenie istniejących opcji
+                    doctorSelect.append('<option value="" disabled selected>Wybierz lekarza</option>');
+
+                    // Dodanie opcji do selecta
+                    doctors.forEach((doctor) => {
+                        doctorSelect.append(`<option value="${doctor.id}">${doctor.imie} ${doctor.nazwisko}</option>`);
+                    });
+
+                    // Automatyczne ustawienie pierwszej opcji, jeśli istnieje
+                    const firstOptionValue = doctorSelect.find('option:not([disabled]):first').val();
+                    if (firstOptionValue) {
+                        doctorSelect.val(firstOptionValue).trigger('change'); // Ustawienie i wymuszenie zmiany w Select2
+                    }
+                },
+                error: function () {
+                    console.error('Błąd podczas pobierania listy lekarzy.');
+                },
+            });
+        };
+
+        if ($('#doctorSelect').length) {
+            $('#doctorSelect').select2({
+                placeholder: 'Wybierz lekarza',
+                allowClear: true,
+                width: '100%'
+            });
+            fetchDoctors();
+        }
+
+        $('#doctorSelect').on('change', function () {
+            updateCalendar();
+        });
+
+        const calendarBody = $('#calendarBody');
+        const weekRange = $('#weekRange');
+        let currentDate = new Date();
+
+        const getWeekRange = (date) => {
+            const start = new Date(date);
+            const dayOfWeek = start.getDay();
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            start.setDate(start.getDate() + diffToMonday);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 4);
+            return { start, end };
+        };
+
+        const formatDate = (date) => {
+            return date.toLocaleDateString('pl-PL', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            });
+        };
+
+        const updateCalendar = () => {
+            const { start, end } = getWeekRange(currentDate);
+            weekRange.text(`${formatDate(start)} - ${formatDate(end)}`);
+
+            const weekDays = [
+                { id: 'mondayDate', date: new Date(start.getTime()) }, // Kopia poniedziałku
+                { id: 'tuesdayDate', date: new Date(start.getTime() + 1 * 86400000) }, // +1 dzień
+                { id: 'wednesdayDate', date: new Date(start.getTime() + 2 * 86400000) }, // +2 dni
+                { id: 'thursdayDate', date: new Date(start.getTime() + 3 * 86400000) }, // +3 dni
+                { id: 'fridayDate', date: new Date(start.getTime() + 4 * 86400000) }, // +4 dni
+            ];
+
+            weekDays.forEach((day) => {
+                $(`#${day.id}`).text(formatDate(day.date));
+            });
+            console.log(start);
+            $.ajax({
+                url: '/Doctor/calendar/getWeeklySchedule',
+                method: 'GET',
+                data: { startDate: start.toISOString(), endDate: end.toISOString(), doctorId: $('#doctorSelect').val() },
+                success: function (data) {
+                    calendarBody.empty();
+                    const workingHours = generateTimeSlots(data.startHour, data.endHour);
+
+                    workingHours.forEach((hour) => {
+                        const tr = $('<tr></tr>');
+                        tr.append(`<td>${hour}</td>`);
+
+                        for (let day = 0; day < 5; day++) {
+                            tr.append('<td class="empty"></td>');
+                        }
+
+                        calendarBody.append(tr);
+                    });
+
+                    if (data.schedule) {
+                        data.schedule.forEach((row) => {
+                            const hourRow = calendarBody.find(`td:contains(${row.godzina.slice(0, 5)})`).parent();
+                            if (hourRow.length) {
+                                const days = ['poniedzialek', 'wtorek', 'sroda', 'czwartek', 'piatek'];
+                                days.forEach((day, index) => {
+                                    const cellData = row[day];
+                                    if (cellData) {
+                                        hourRow.children().eq(index + 1).html(`
+                                        <button class="btn btn-link pesel-link" data-visit-id="${cellData.visitId}">
+                                        ${cellData.pesel}
+                                        </button>
+                                        `);
+                                    }
+                                });
+                            }
+                        });
+
+                    }
+
+                },
+                error: function () {
+                    console.error('Błąd podczas pobierania kalendarza wizyt.');
+                },
+            });
+        };
+
+        const generateTimeSlots = (startHour, endHour) => {
+            const slots = [];
+            if (!startHour || !endHour) {
+                console.error("Brak godzin pracy!");
+                return slots;
+            }
+            const startTime = new Date(`1970-01-01T${startHour}`);
+            const endTime = new Date(`1970-01-01T${endHour}`);
+            while (startTime < endTime) {
+                slots.push(startTime.toTimeString().slice(0, 5));
+                startTime.setMinutes(startTime.getMinutes() + 30);
+            }
+            return slots;
+        };
+
+
+
+
+        $('#prevWeek').on('click', function () {
+            currentDate.setDate(currentDate.getDate() - 7);
+            updateCalendar();
+        });
+
+        $('#nextWeek').on('click', function () {
+            currentDate.setDate(currentDate.getDate() + 7);
+            updateCalendar();
+        });
+
+        $(document).on('click', '.pesel-link', function () {
+            const visitId = $(this).data('visit-id'); // Pobierz ID wizyty
+            console.log("id wizyty", visitId);
+            // Pobranie szczegółów wizyty
+            $.ajax({
+                url: '/Doctor/calendar/getVisitDetails',
+                method: 'GET',
+                data: { visitId: visitId }, // Wysyłamy ID wizyty
+                success: function (data) {
+                    console.log('Data otrzymana z serwera:', data.date);
+                    $('#visitDate').text(formatDateWithoutTimezone(data.date));
+
+
+                    $('#visitTime').text(data.time.toString().slice(0,5) || 'Brak danych');
+                    $('#patientName').text(data.patientname || 'Brak danych');
+                    $('#patientPesel').text(data.pesel || 'Brak danych');
+                    $('#visitDescription').text(data.description || 'Brak danych');
+
+                    const status = data.status || '';
+                    const startVisitButton = $('#startVisitButton');
+                    const cancelVisitButton = $('#cancelVisitButton');
+
+                    // Sprawdzenie statusu wizyty
+                    if (status.toLowerCase() === 'odbyta') {
+                        startVisitButton.prop('disabled', true).text('Wizyta Odbyta');
+                        cancelVisitButton.prop('disabled', true).text('Nie można odwołać');
+                    } else {
+                        startVisitButton.prop('disabled', false).text('Rozpocznij Wizytę');
+                        cancelVisitButton.prop('disabled', false).text('Odwołaj Wizytę');
+                    }
+
+                    // Przechowujemy ID wizyty
+                    startVisitButton.data('visit-id', data.visitid);
+                    cancelVisitButton.data('visit-id', data.visitid);
+
+                    // Otwórz modal
+                    $('#visitDetailsModal').modal('show');
+                },
+                error: function () {
+                    alert('Błąd podczas pobierania szczegółów wizyty.');
+                }
+            });
+        });
+
+        // Obsługa przycisku "Rozpocznij Wizytę"
+        $('#startVisitButton').on('click', function () {
+            const visitId = $(this).data('visit-id'); // Pobierz ID wizyty
+            if (visitId) {
+                // Przekierowanie na stronę wizyty z parametrem query (visitId)
+                window.location.href = `/doctor/appointment?visitId=${visitId}`;
+            }
+        });
+
+        $('#cancelVisitButton').on('click', function () {
+            const visitId = $(this).data('visit-id');
+            if (confirm('Czy na pewno chcesz odwołać tę wizytę?')) {
+                $.ajax({
+                    url: '/Register/calendar/cancelVisit',
+                    method: 'POST',
+                    data: { visitId: visitId },
+                    success: function () {
+                        alert('Wizyta została odwołana.');
+                        $('#visitDetailsModal').modal('hide');
+                        updateCalendar(); // Odśwież kalendarz
+                    },
+                    error: function () {
+                        alert('Błąd podczas odwoływania wizyty.');
+                    }
+                });
+            }
+        });
+
+        updateCalendar();
+    });
+</script>
+</body>
+</html>

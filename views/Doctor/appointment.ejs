@@ -1,0 +1,231 @@
+<div class="container mt-4">
+    <h2>Rozpocznij Wizytę</h2>
+
+    <form method="POST" action="/Doctor/appointment">
+        <!-- Wybór daty wizyty -->
+        <div class="mb-3">
+            <label for="visitDate" class="form-label">Wybierz datę</label>
+            <input type="date" class="form-control" id="visitDate" name="visitDate" required>
+        </div>
+
+        <div id="visitDetailsSection" style="display:none;">
+            <!-- Wybór pacjenta -->
+            <div class="mb-3">
+                <label for="visitTime" class="form-label">Wybierz pacjenta</label>
+                <select class="form-select" id="visitTime" name="visitTime" required>
+                    <option value="" disabled selected>Wybierz pacjenta...</option>
+                    <!-- Pacjenci będą dynamicznie generowani -->
+                </select>
+            </div>
+        </div>
+
+        <div id="descriptionSection" style="display:none;">
+            <div class="mb-3">
+                <label for="description" class="form-label">Opis dolegliwości</label>
+                <div id="description" class="p-3 border rounded bg-light">
+                    <!-- Tutaj dynamicznie wstawiany będzie opis wizyty -->
+                    Brak opisu dolegliwości.
+                </div>
+            </div>
+        </div>
+
+
+
+            <div class="mb-3" id="diagnosisSection" style="display:none;">
+                <label for="diagnosis" class="form-label">Diagnoza</label>
+                <textarea class="form-control" id="diagnosis" name="diagnosis" rows="3"></textarea>
+            </div>
+
+        <!-- Checkbox do wystawienia recepty -->
+        <div class="mb-3">
+            <input type="checkbox" id="prescriptionCheckbox" name="prescription">
+            <label for="prescriptionCheckbox" class="form-label">Wystaw receptę</label>
+        </div>
+
+        <!-- Sekcja leków i dawkowania -->
+        <div id="medicationSection" style="display:none;">
+            <div class="mb-3">
+                <label for="medications" class="form-label">Wybierz Leki</label>
+                <select id="medications" name="medicationId" multiple="multiple" class="form-select">
+                        <!-- Opcje zostaną dodane dynamicznie -->
+                </select>
+            </div>
+
+                <div class="mb-3">
+                    <label for="dosage" class="form-label">Dawkowanie</label>
+                    <textarea class="form-control" id="dosage" name="dosage" rows="3"></textarea>
+                </div>
+        </div>
+
+
+
+        <button type="submit" class="btn btn-primary">Rozpocznij Wizytę</button>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script type="module" src="/js/script.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script type="module">
+    function formatDateWithoutTimezone(dateString) {
+        if (!dateString) return '';
+
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Dodaj zero przed miesiącem
+        const day = String(date.getDate()).padStart(2, '0'); // Dodaj zero przed dniem
+
+        return `${year}-${month}-${day}`; // Format YYYY-MM-DD
+    }
+
+    $(document).ready(function() {
+
+        const getUrlParameter = (name) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        };
+
+        const visitId = getUrlParameter('visitId'); // Pobierz visitId z URL
+
+        if (visitId) {
+            // Pobieranie szczegółów wizyty
+            $.ajax({
+                url: '/Doctor/appointment/getAppointmentDetails',
+                method: 'GET',
+                data: { visitId: visitId },
+                success: function (data) {
+                    $('#visitDate').val(formatDateWithoutTimezone(data.data_wizyty));
+
+                    $('#visitDate').trigger('change');
+
+                    setTimeout(() => {
+                        $('#visitTime').val(visitId).trigger('change');
+                    }, 100);
+                },
+                error: function () {
+                    alert('Błąd podczas pobierania szczegółów wizyty.');
+                }
+            });
+        }
+
+        // Obsługa zmiany daty
+        $('#visitDate').on('change', function() {
+            const visitDate = $(this).val(); // Pobieramy wybraną datę
+
+            if (visitDate) {
+                $('#visitDetailsSection').show(); // Pokazujemy sekcję z pacjentami
+                $('#diagnosisSection').show();
+
+                $.ajax({
+                    url: '/Doctor/appointment/getVisitDetails', // Wywołanie API do pobrania pacjentów
+                    method: 'GET',
+                    data: { visitDate: visitDate }, // Przekazujemy datę wizyty
+                    success: function(data) {
+                        // Czyszczenie pola wyboru pacjentów
+                        $('#visitTime').empty().append('<option value="" disabled selected>Wybierz pacjenta...</option>');
+
+                        // Dodawanie pacjentów do dropdownu (wraz z godziną wizyty)
+                        data.patients.forEach(function(patient) {
+                            $('#visitTime').append(`<option value="${patient.wizyta_id}" ${patient.status === 'odbyta' ? 'disabled' : ''} >${patient.pacjent} - ${patient.godzina.slice(0, 5)} (PESEL: ${patient.pesel})</option>`);
+                        });
+                    },
+                    error: function() {
+                        alert('Wystąpił problem z pobieraniem pacjentów.');
+                    }
+                });
+            } else {
+                $('#visitDetailsSection').hide(); // Ukrywanie sekcji, jeśli nie wybrano daty
+            }
+        });
+
+        $('#visitTime').on('change', function () {
+            const visitId = $(this).val(); // Pobieramy wybrane wizyta_id
+
+            if (visitId) {
+                // Pobieranie opisu wizyty na podstawie wizyta_id
+                $.ajax({
+                    url: '/Doctor/appointment/getVisitDescription', // Wywołanie API do pobrania opisu
+                    method: 'GET',
+                    data: { visitId: visitId },
+                    success: function (data) {
+                        if (data.opis) {
+                            $('#description').text(data.opis); // Wstawiamy opis
+                        } else {
+                            $('#description').text('Brak opisu wizyty.');
+                        }
+
+                        // Pokazujemy sekcję z opisem
+                        $('#descriptionSection').show();
+                    },
+                    error: function () {
+                        alert('Wystąpił problem z pobieraniem opisu wizyty.');
+                    },
+                });
+            } else {
+                $('#descriptionSection').hide(); // Ukrywamy sekcję, jeśli nie wybrano pacjenta
+            }
+        });
+
+        $('#prescriptionCheckbox').on('change', function () {
+            if ($(this).is(':checked')) {
+                $('#medicationSection').show(); // Pokazujemy sekcję z pacjentami
+
+
+                // Pobieranie leków z backendu
+                $.ajax({
+                    url: '/Doctor/appointment/getMedications',
+                    method: 'GET',
+                    success: function (data) {
+                        // Dodawanie pacjentów do dropdownu (wraz z godziną wizyty)
+                        data.medications.forEach(function(lek) {
+                            $('#medications').append(`<option value="${lek.id_leku}">${lek.nazwa} (${lek.opis}) ${lek.pojemnosc} - ${lek.cena} zl </option>`);
+                        });
+                    },
+                    error: function () {
+                        alert('Błąd podczas ładowania leków.');
+                    }
+                });
+                $('#medications').select2({
+                    placeholder: 'Wybierz lek...',
+                    allowClear: true,
+                    width: '100%',
+
+                });
+            } else {
+                $('#medicationSection').hide();
+
+            }
+        });
+
+
+
+        // Pobieranie leków z backendu
+        $.ajax({
+            url: '/Doctor/appointment/getMedications',
+            method: 'GET',
+            success: function (data) {
+                $('#medications').empty(); // Usuwa istniejące opcje
+                // Dodawanie pacjentów do dropdownu (wraz z godziną wizyty)
+                data.medications.forEach(function(lek) {
+                    $('#medications').append(`<option value="${lek.id_leku}">${lek.nazwa} (${lek.opis}) ${lek.pojemnosc} - ${lek.cena} zl </option>`);
+                });
+            },
+            error: function () {
+                alert('Błąd podczas ładowania leków.');
+            }
+        });
+
+
+
+        $('#medications').select2({
+            placeholder: 'Wybierz lek...',
+            allowClear: true,
+            width: '100%',
+        });
+    });
+</script>
+
+
+

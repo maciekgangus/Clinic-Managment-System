@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historia Wizyt</title>
+    <link rel="stylesheet" href="/node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="/node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script type="module" src="/js/script.js"></script>
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Historia Wizyt Pacjentów</h2>
+
+    <!-- Sekcja wyboru pacjenta -->
+    <div class="row">
+        <div class="col-md-4">
+            <h4>Wybierz Pacjenta</h4>
+            <select class="form-select" id="patientSelect" style="width: 100%;">
+                <option value="" disabled selected>Wybierz pacjenta...</option>
+                <!-- Lista pacjentów będzie generowana dynamicznie -->
+            </select>
+        </div>
+
+        <!-- Sekcja szczegółów pacjenta -->
+        <div class="col-md-8">
+            <h4 id="patientDetailsTitle" class="d-none">Szczegóły Wizyt</h4>
+            <div id="patientDetails" class="d-none">
+                <!-- Szczegóły pacjenta i jego wizyt -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Wizyty</h5>
+                        <div id="detailsContent">
+                            <!-- Szczegóły będą generowane dynamicznie -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { formatDateWithoutTimezone } from "/js/script.js";
+
+    $(document).ready(function () {
+        $('#patientSelect').select2({
+            placeholder: 'Wybierz pacjenta...',
+            allowClear: true,
+            width: '100%',
+        });
+
+        // Pobranie listy pacjentów
+        $.ajax({
+            url: '/Doctor/prescription/patients',
+            method: 'GET',
+            success: function (data) {
+                const patientSelect = $('#patientSelect');
+                patientSelect.empty().append('<option value="" disabled selected>Wybierz pacjenta...</option>');
+                data.patients.forEach(patient => {
+                    patientSelect.append(
+                        `<option value="${patient.pacjent_id}">
+                            ${patient.imie} ${patient.nazwisko} (PESEL: ${patient.pesel})
+                        </option>`
+                    );
+                });
+            },
+            error: function () {
+                alert('Błąd podczas pobierania listy pacjentów.');
+            }
+        });
+
+        // Obsługa zmiany pacjenta
+        $('#patientSelect').on('change', function () {
+            const patientId = $(this).val();
+            if (!patientId) return;
+
+            $.ajax({
+                url: '/Doctor/prescription/patientDetails',
+                method: 'GET',
+                data: { patientId },
+                success: function (data) {
+                    const detailsContent = $('#detailsContent');
+                    detailsContent.empty();
+
+                    if (data.details.length > 0) {
+                        data.details.forEach((detail) => {
+                            const recepta = detail.recepta || {};
+                            const lekiList = recepta.leki
+                                ? recepta.leki.map(
+                                    lek => `<li>${lek.nazwa} (${lek.opis}) - ${lek.ilosc} szt.</li>`
+                                ).join('')
+                                : '<p>Brak leków na recepcie.</p>';
+
+                            detailsContent.append(`
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Wizyta z dnia: ${formatDateWithoutTimezone(detail.data_wizyty)}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <h6 class="fw-bold">Opis wizyty:</h6>
+                                        <p>${detail.opis_wizyty || 'Brak opisu'}</p>
+
+                                        <h6 class="fw-bold">Lekarz prowadzący:</h6>
+                                        <p>${detail.lekarz_prowadzacy || 'Brak informacji o lekarzu'}</p>
+
+                                        <h6 class="fw-bold">Diagnoza:</h6>
+                                        <p>${detail.diagnoza || 'Brak diagnozy'}</p>
+
+                                        ${recepta.nr_recepty ? `
+                                            <h6 class="fw-bold">Recepta:</h6>
+                                            <p>Numer recepty: ${recepta.nr_recepty}</p>
+                                            <p><strong>Data wystawienia:</strong> ${formatDateWithoutTimezone(recepta.data_wystawienia)}</p>
+                                            <h6>Leki:</h6>
+                                            <ul>${lekiList}</ul>
+                                        ` : '<p>Recepta nie została wystawiona podczas tej wizyty.</p>'}
+                                    </div>
+                                </div>
+                            `);
+                        });
+                    } else {
+                        detailsContent.append('<p>Brak danych dla wybranego pacjenta.</p>');
+                    }
+
+                    $('#patientDetailsTitle').removeClass('d-none');
+                    $('#patientDetails').removeClass('d-none');
+                },
+                error: function () {
+                    alert('Błąd podczas pobierania szczegółów pacjenta.');
+                },
+            });
+        });
+    });
+</script>
+</body>
+</html>
