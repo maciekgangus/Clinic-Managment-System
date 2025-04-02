@@ -176,68 +176,10 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION project.validate_pesel(pesel text, birth_date date, gender character)
-    RETURNS boolean
-    LANGUAGE plpgsql
-AS $$
-DECLARE
-    pesel_date DATE;
-    checksum INT;
-    gender_digit INT;
-    weights INT[] := ARRAY[1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
-    calculated_checksum INT := 0;
-BEGIN
-    IF LENGTH(pesel) != 11 OR pesel !~ '^[0-9]+$' THEN
-        RETURN FALSE;
-    END IF;
 
-    pesel_date := TO_DATE(
-            CASE
-                WHEN SUBSTRING(pesel, 3, 1)::INT IN (0, 1) THEN '19' || SUBSTRING(pesel, 1, 2) || '-' || SUBSTRING(pesel, 3, 2) || '-' || SUBSTRING(pesel, 5, 2)
-                WHEN SUBSTRING(pesel, 3, 1)::INT IN (2, 3) THEN '20' || SUBSTRING(pesel, 1, 2) || '-' || LPAD((SUBSTRING(pesel, 3, 2)::INT - 20)::TEXT, 2, '0') || '-' || SUBSTRING(pesel, 5, 2)
-                WHEN SUBSTRING(pesel, 3, 1)::INT IN (8, 9) THEN '18' || SUBSTRING(pesel, 1, 2) || '-' || LPAD((SUBSTRING(pesel, 3, 2)::INT - 80)::TEXT, 2, '0') || '-' || SUBSTRING(pesel, 5, 2)
-                ELSE NULL
-                END, 'YYYY-MM-DD'
-                  );
-
-    IF pesel_date IS NULL OR pesel_date != birth_date THEN
-        RETURN FALSE;
-    END IF;
-
-    gender_digit := SUBSTRING(pesel, 10, 1)::INT;
-    IF (gender = 'M' AND gender_digit % 2 = 0) OR (gender = 'K' AND gender_digit % 2 != 0) THEN
-        RETURN FALSE;
-    END IF;
-
-    FOR i IN 1..10 LOOP
-            calculated_checksum := calculated_checksum + (SUBSTRING(pesel, i, 1)::INT * weights[i]);
-        END LOOP;
-    checksum := (10 - (calculated_checksum % 10)) % 10;
-
-    IF checksum != SUBSTRING(pesel, 11, 1)::INT THEN
-        RETURN FALSE;
-    END IF;
-
-    RETURN TRUE;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION project.validate_pesel_trigger()
-    RETURNS trigger
-    LANGUAGE plpgsql
-AS $$
-BEGIN
-    IF NOT project.validate_pesel(NEW.pesel, NEW.data_urodzenia, NEW.plec) THEN
-        RAISE EXCEPTION 'Niepoprawny numer PESEL: % dla daty urodzenia % i płci %', NEW.pesel, NEW.data_urodzenia, NEW.plec;
-    END IF;
-    RETURN NEW;
-END;
-$$;
 
 -- Triggery (na końcu)
-CREATE TRIGGER check_pesel_validity
-    BEFORE INSERT OR UPDATE ON project.pacjenci
-    FOR EACH ROW EXECUTE FUNCTION project.validate_pesel_trigger();
+
 
 CREATE TRIGGER before_patient_delete
     BEFORE DELETE ON project.pacjenci
@@ -256,18 +198,14 @@ CREATE TRIGGER generuj_nr_recepty_trigger
     FOR EACH ROW EXECUTE FUNCTION project.generuj_nr_recepty();
 
 
-INSERT INTO project.uzytkownicy (nazwa_uzytkownika, haslo, typ_uzytkownika) VALUES
-                                                                                ('admin1', 'adminpass', 'administrator'),
-                                                                                ('lekarz1', 'lekarzpass', 'lekarz'),
-                                                                                ('recepcja1', 'recepcjapass', 'recepcjonistka');
 
--- Lekarz
-INSERT INTO project.lekarze (uzytkownik_id, imie, nazwisko, numer_telefonu, email, specjalizacja, data_urodzenia, godziny_pracy_od, godziny_pracy_do) VALUES
-    (2, 'Michał', 'Nowicki', '500100200', 'michal.nowicki@example.com', 'kardiolog', '1978-05-10', '08:00', '16:00');
+INSERT INTO project.pacjenci (imie, nazwisko, numer_telefonu, email, data_urodzenia, pesel, plec) VALUES
 
--- Recepcjonistka
-INSERT INTO project.recepcjonistki (uzytkownik_id, imie, nazwisko, numer_telefonu, email, data_urodzenia) VALUES
-    (3, 'Karolina', 'Mazur', '600700800', 'karolina.mazur@example.com', '1995-09-22');
+                                                                                                      ('Tomasz', 'Wójcik', '654321987', 'tomasz.wojcik@example.com', '1985-07-25', '85072563176', 'M'),
+                                                                                                      ('Ewa', 'Dąbrowska', '112233445', 'ewa.dabrowska@example.com', '1960-11-05', '60110579591', 'K'),
+                                                                                                      ('Jolanta', 'Nowak', '123456789', 'jolanta.nowak@example.com', '1965-09-26', '65092657383', 'K'),
+                                                                                                      ('Krzysztof', 'Bąk', '987654321', 'krzysztof.bak@example.com', '1989-05-21', '89052172336', 'M'),
+                                                                                                      ('Andrzej', 'Kowalski', '123456789', 'andrzej.kowalski@example.com', '1953-01-25', '53012555222', 'M'),
+                                                                                                      ('Pawel', 'Białecki', '987654321', 'ewa.bialecka@example.com', '1964-07-29', '64072953312', 'M'),
+                                                                                                      ('Krzysztof', 'Mazurek', '555123456', 'krzysztof.mazurek@example.com', '1993-02-09', '93020965932', 'M');
 
-INSERT INTO project.administratorzy (uzytkownik_id, imie, nazwisko, numer_telefonu, email, data_urodzenia) VALUES
-    (1, 'Jan', 'Admin', '111222333', 'jan.admin@example.com', '1980-01-01');
