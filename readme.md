@@ -1,4 +1,4 @@
-# Graph Algorithm Visualization App
+# 🏥 Clinic Management System
 
 A Node.js + Express based web application for managing a medical clinic. The system supports different user roles **(Admin, Doctor, Receptionist)**, allowing secure access and interaction with functionalities such as patient registration, appointment scheduling, prescriptions, diagnoses, and work statistics.
 
